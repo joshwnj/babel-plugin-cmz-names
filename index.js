@@ -6,19 +6,6 @@ function isRule (raw) {
   return raw.indexOf(':') > 0
 }
 
-function renderSrc (scopedName, value) {
-  const isWrapped = value.indexOf('{') > -1
-  if (isWrapped) {
-    return value.replace(/&/g, '.' + scopedName)
-  }
-
-  return `
-.${scopedName} {
-  ${value}
-}
-`
-}
-
 function relFilename (filename) {
   return filename.indexOf(root) === 0
     ? filename.substr(root.length + 1)
@@ -31,20 +18,45 @@ function generateScopedName (filename, line) {
     .replace(/\W+/g, '_') + '-' + line
 }
 
+// add comment wrappers to indicate that a css rule is extractable
+function wrapExtractable (path) {
+  path.addComment('leading', 'cmz|')
+  path.addComment('trailing', '|cmz')
+}
+
+// visit an argument of a `cmz()` call
+// and add comment wrappers if it's an extractable rule
+function wrapCmzArg (path) {
+  const node = path.node
+  switch (node.type) {
+  case 'StringLiteral':
+    var value = node.value
+    if (isRule(value)) {
+      wrapExtractable(path)
+    }
+    break
+
+  case 'TemplateLiteral':
+    // ignore templates with expressions
+    if (node.expressions.length) { return }
+
+    var value = node.quasis.map(q => q.value.cooked).join('')
+    if (isRule(value)) {
+      wrapExtractable(path)
+    }
+    break
+
+  case 'ArrayExpression':
+    path.get('elements').forEach(wrapCmzArg)
+    break
+  }
+}
+
 module.exports = function (babel) {
   const t = babel.types
 
   return {
     visitor: {
-      Program: {
-        enter: function (path, state) {
-          state.cmzSrc = ''
-        },
-        exit: function (path, state) {
-          if (!state.opts.extract || !state.cmzSrc) { return }
-          //path.addComment('trailing', 'cmz|' + state.cmzSrc + '|cmz')
-        }
-      },
       CallExpression: function (path, state) {
         const node = path.node
         const callee = node.callee
@@ -60,70 +72,11 @@ module.exports = function (babel) {
           node.arguments.unshift(t.stringLiteral(scopedName))
         }
 
-        // extract styles
-        if (!state.opts.extract) { return }
-
         path.get('arguments').forEach(function (argPath, i) {
           // first argument is the name
           if (i === 0) { return }
 
-          const arg = argPath.node
-          switch (arg.type) {
-          case 'StringLiteral':
-            var value = arg.value
-            if (isRule(value)) {
-              // remove it
-              argPath.addComment('leading', 'cmz|')
-              argPath.addComment('trailing', '|cmz')
-              state.cmzSrc += renderSrc(scopedName, value)
-            }
-            break
-
-          case 'TemplateLiteral':
-            // ignore templates with expressions
-            if (arg.expressions.length) { return }
-
-            var value = arg.quasis.map(q => q.value.cooked).join('')
-            if (isRule(value)) {
-              // remove it
-              argPath.addComment('leading', 'cmz|')
-              argPath.addComment('trailing', '|cmz')
-
-              state.cmzSrc += renderSrc(scopedName, value)
-            }
-            break
-
-          case 'ArrayExpression':
-            argPath.get('elements').forEach(function (elPath, i) {
-              const el = elPath.node
-              switch (el.type) {
-              case 'StringLiteral':
-                var value = el.value
-                if (isRule(value)) {
-                  // remove it
-                  elPath.addComment('leading', 'cmz|')
-                  elPath.addComment('trailing', '|cmz')
-
-                  state.cmzSrc += renderSrc(scopedName, value)
-                }
-                break
-
-              case 'TemplateLiteral':
-                // ignore templates with expressions
-                if (el.expressions.length) { return }
-
-                var value = el.quasis.map(q => q.value.cooked).join('')
-                if (isRule(value)) {
-                  // remove it
-                  elPath.addComment('leading', 'cmz|')
-                  elPath.addComment('trailing', '|cmz')
-
-                  state.cmzSrc += renderSrc(scopedName, value)
-                }
-                break
-              }
-            })
-          }
+          wrapCmzArg(argPath)
         })
       }
     }
