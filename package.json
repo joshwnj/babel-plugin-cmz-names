@@ -4,7 +4,8 @@
   "description": "Babel plugin to give [`cmz`](https://github.com/joshwnj/cmz) nice readable classnames.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "standard",
+    "test": "npm run lint"
   },
   "keywords": [],
   "author": "joshwnj",
@@ -16,5 +17,8 @@
   "bugs": {
     "url": "https://github.com/joshwnj/babel-plugin-cmz-names/issues"
   },
-  "homepage": "https://github.com/joshwnj/babel-plugin-cmz-names#readme"
+  "homepage": "https://github.com/joshwnj/babel-plugin-cmz-names#readme",
+  "devDependencies": {
+    "standard": "^10.0.3"
+  }
 }

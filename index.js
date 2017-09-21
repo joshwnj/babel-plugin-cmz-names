@@ -35,26 +35,25 @@ function wrapExtractable (path) {
 function wrapCmzArg (path) {
   const node = path.node
   switch (node.type) {
-  case 'StringLiteral':
-    var value = node.value
-    if (isRule(value)) {
-      wrapExtractable(path)
-    }
-    break
+    case 'StringLiteral':
+      if (isRule(node.value)) {
+        wrapExtractable(path)
+      }
+      break
 
-  case 'TemplateLiteral':
+    case 'TemplateLiteral':
     // ignore templates with expressions
-    if (node.expressions.length) { return }
+      if (node.expressions.length) { return }
 
-    var value = node.quasis.map(q => q.value.cooked).join('')
-    if (isRule(value)) {
-      wrapExtractable(path)
-    }
-    break
+      const value = node.quasis.map(q => q.value.cooked).join('')
+      if (isRule(value)) {
+        wrapExtractable(path)
+      }
+      break
 
-  case 'ArrayExpression':
-    path.get('elements').forEach(wrapCmzArg)
-    break
+    case 'ArrayExpression':
+      path.get('elements').forEach(wrapCmzArg)
+      break
   }
 }
 
