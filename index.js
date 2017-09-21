@@ -12,10 +12,16 @@ function relFilename (filename) {
     : filename
 }
 
-function generateScopedName (filename, line) {
-  return filename
+function generateScopedName (filename, line, replace) {
+  var name = filename
     .replace(/\.js$/, '')
     .replace(/\W+/g, '_') + '-' + line
+
+  replace.forEach(function (parts) {
+    name = name.replace(parts[0], parts[1])
+  })
+
+  return name
 }
 
 // add comment wrappers to indicate that a css rule is extractable
@@ -62,10 +68,12 @@ module.exports = function (babel) {
         const callee = node.callee
         if (callee.name !== CMZ_NAME) { return }
 
+        const opts = state.opts || {}
+
         // get the filename and line number
         const filename = state.file.opts.filename
         const line = callee.loc.start.line
-        const scopedName = generateScopedName(relFilename(filename), line)
+        const scopedName = generateScopedName(relFilename(filename), line, opts.replace || [])
 
         // name unnamed atoms
         if (node.arguments.length < 2) {
