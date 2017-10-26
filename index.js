@@ -75,9 +75,8 @@ module.exports = function (babel) {
         const scopedName = generateScopedName(relFilename(filename), line, opts.replace || [])
 
         // name unnamed atoms
-        if (node.arguments.length < 2) {
-          node.arguments.unshift(t.stringLiteral(scopedName))
-        }
+
+        node.arguments.unshift(t.stringLiteral(scopedName))
 
         path.get('arguments').forEach(function (argPath, i) {
           // first argument is the name
@@ -85,6 +84,9 @@ module.exports = function (babel) {
 
           wrapCmzArg(argPath)
         })
+
+        // switch to `cmz.named`
+        callee.name += '.named'
       }
     }
   }
