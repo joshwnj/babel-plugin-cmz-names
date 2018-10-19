@@ -1,6 +1,17 @@
 const CMZ_NAME = 'cmz'
 
-const root = process.cwd()
+const root = slash(process.cwd())
+
+function slash (input) {
+  const isExtendedLengthPath = /^\\\\\?\\/.test(input)
+  const hasNonAscii = /[^\u0000-\u0080]+/.test(input)
+
+  if (isExtendedLengthPath || hasNonAscii) {
+    return input
+  }
+
+  return input.replace(/\\/g, '/')
+}
 
 function isRule (raw) {
   return raw.indexOf(':') > 0
